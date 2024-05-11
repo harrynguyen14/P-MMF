@@ -75,9 +75,9 @@ def compute_next_dual(eta, rho, dual, gradient, lambd):
 
 def P_MMF_CPU(lambd,args):
     T = args.Time
-    trained_preference_scores = np.load(os.path.join("tmp",args.base_model + "_" + args.Dataset + "_simulation.npy"))
+    trained_preference_scores = np.load(os.path.join(args.dataset-dir + args.dataset_name + ".npy"))
 
-    datas = pd.read_csv(os.path.join("dataset",args.Dataset,args.Dataset+".simulation.inter"),delimiter='\t')
+    datas = pd.read_csv(os.path.join("dataset",args.dataset_name,args.dataset_name+".simulation.inter"),delimiter='\t')
     uid_field,iid_field,label_field,time_field,provider_field = datas.columns
 
     num_providers = len(datas[provider_field].unique())
@@ -88,7 +88,7 @@ def P_MMF_CPU(lambd,args):
     datas.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(datas)* 0.1//T)
 
-    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(np.int)
+    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(int)
     UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
@@ -177,9 +177,9 @@ def P_MMF_CPU(lambd,args):
 
 def P_MMF_GPU(lambd,args):
     T = args.Time
-    trained_preference_scores = np.load(os.path.join("tmp",args.base_model + "_" + args.Dataset + "_simulation.npy"))
-
-    datas = pd.read_csv(os.path.join("dataset",args.Dataset,args.Dataset+".simulation.inter"),delimiter='\t')
+    # trained_preference_scores = np.load(os.path.join("tmp",args.base_model + "_" + args.Dataset + "_simulation.npy"))
+    trained_preference_scores = np.load(os.path.join(args.dataset-dir + args.dataset_name + ".npy"))
+    datas = pd.read_csv(os.path.join("dataset",args.dataset_name,args.dataset_name+".simulation.inter"),delimiter='\t')
     uid_field,iid_field,label_field,time_field,provider_field = datas.columns
 
     num_providers = len(datas[provider_field].unique())
@@ -190,7 +190,7 @@ def P_MMF_GPU(lambd,args):
     datas.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(datas)* 0.1//T)
 
-    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(np.int)
+    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(int)
     UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
@@ -268,7 +268,7 @@ def P_MMF_GPU(lambd,args):
         result = 0
         for t in range(T):
             dcg = 0
-            x_recommended = result_x[t].cpu().detach().numpy().astype(np.int)
+            x_recommended = result_x[t].cpu().detach().numpy().astype(int)
             #x_recommended = np.random.choice(list(range(0,item_num)),size=K,replace=False,p=x_value[t,:]/K)
             for k in range(K):
                 base_model_provider_exposure[iid2pid[x_recommended[k]]] += 1
