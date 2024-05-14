@@ -75,10 +75,16 @@ def compute_next_dual(eta, rho, dual, gradient, lambd):
 
 def P_MMF_CPU(lambd,args):
     T = args.Time
-    trained_preference_scores = np.load(os.path.join(args.dataset-dir + args.dataset_name + ".npy"))
+    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
 
-    datas = pd.read_csv(os.path.join("dataset",args.dataset_name,args.dataset_name+".simulation.inter"),delimiter='\t')
-    uid_field,iid_field,label_field,time_field,provider_field = datas.columns
+    datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata_pro.npy", allow_pickle=True)
+    #uid_field,iid_field,label_field,time_field,provider_field = datas.columns
+    
+    uid_field = datas['n_users']
+    iid_field = datas['n_items']
+    #label_field = datas['n_users']
+    time_field = datas['reviews_time']
+    provider_field = datas['brand']
 
     num_providers = len(datas[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
@@ -88,7 +94,7 @@ def P_MMF_CPU(lambd,args):
     datas.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(datas)* 0.1//T)
 
-    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(int)
+    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(np.int)
     UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
@@ -178,9 +184,15 @@ def P_MMF_CPU(lambd,args):
 def P_MMF_GPU(lambd,args):
     T = args.Time
     # trained_preference_scores = np.load(os.path.join("tmp",args.base_model + "_" + args.Dataset + "_simulation.npy"))
-    trained_preference_scores = np.load(os.path.join(args.dataset-dir + args.dataset_name + ".npy"))
-    datas = pd.read_csv(os.path.join("dataset",args.dataset_name,args.dataset_name+".simulation.inter"),delimiter='\t')
-    uid_field,iid_field,label_field,time_field,provider_field = datas.columns
+    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
+    datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata_pro.npy", allow_pickle=True)
+    #uid_field,iid_field,label_field,time_field,provider_field = datas.columns
+
+    uid_field = datas['n_users']
+    iid_field = datas['n_items']
+    #label_field = datas['n_users']
+    time_field = datas['reviews_time']
+    provider_field = datas['brand']
 
     num_providers = len(datas[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
@@ -190,7 +202,7 @@ def P_MMF_GPU(lambd,args):
     datas.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(datas)* 0.1//T)
 
-    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(int)
+    data_val = np.array(datas[uid_field].values[-batch_size*T:]).astype(np.int)
     UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
