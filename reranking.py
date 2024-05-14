@@ -80,11 +80,11 @@ def P_MMF_CPU(lambd,args):
     datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata_pro.npy", allow_pickle=True)
     #uid_field,iid_field,label_field,time_field,provider_field = datas.columns
     
-    uid_field = datas['n_users']
-    iid_field = datas['n_items']
-    #label_field = datas['n_users']
-    time_field = datas['reviews_time']
-    provider_field = datas['brand']
+    uid_field = datas['n_users'][0]
+    iid_field = datas['n_items'][0]
+    #label_field = datas['n_users'][0]
+    time_field = datas['reviews_time'][0]
+    provider_field = datas['brand'][0]
 
     num_providers = len(datas[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
