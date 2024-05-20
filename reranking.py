@@ -76,21 +76,6 @@ def compute_next_dual(eta, rho, dual, gradient, lambd):
 
 def P_MMF_CPU(lambd,args):
     T = args.Time
-    # trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
-    # print("trained_preference_scores shape: ", trained_preference_scores.shape)
-    # datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
-    # datas = datas.item()
-    # uid_field = datas['user_list']
-    # iid_field = datas['item_list']
-    # provider_field = datas['providers']
-    # time_field = datas['reviews_time']
-    
-    # num_providers = len(provider_field)
-    # user_num, item_num = np.shape(trained_preference_scores)
-    # provider_count = Counter(provider_field)
-    # providerLen = np.array(list(provider_count.values()))
-    # #providerLen = np.array(datas.groupby(provider_field).size().values)
-    # rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
 
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
     datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
@@ -124,14 +109,18 @@ def P_MMF_CPU(lambd,args):
 
     provider_list = provider_item.tolist()
 
-    combined_data = list(zip(iid_pro, provider_item))
-    tmp = list(set(combined_data))
+    combined_data = list(zip(iid_pro, provider_list))
+    print("combined data", combined_data)
+    tmp = list(set(combined_data[:10]))
     #tmp = datas[[iid_field,provider_field]].drop_duplicates()
     
     item2provider = {x: y for x, y in zip(iid_pro, provider_list)}
+    item2pro = list(item2provider.items())[:10]
+    print("item2provider: ", item2pro)
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
+    print("matrix A:", A[:10])
     iid2pid = []
     for i in range(item_num):
         iid2pid.append(item2provider[i])
@@ -211,7 +200,6 @@ def P_MMF_CPU(lambd,args):
 
 def P_MMF_GPU(lambd,args):
     T = args.Time
-    # trained_preference_scores = np.load(os.path.join("tmp",args.base_model + "_" + args.Dataset + "_simulation.npy"))
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
     datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
     ip_data = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/item_providers.npy", allow_pickle=True) 
@@ -244,14 +232,18 @@ def P_MMF_GPU(lambd,args):
 
     provider_list = provider_item.tolist()
 
-    combined_data = list(zip(iid_pro, provider_item))
-    tmp = list(set(combined_data))
+    combined_data = list(zip(iid_pro, provider_list))
+    print("combined data", combined_data)
+    tmp = list(set(combined_data[:10]))
     #tmp = datas[[iid_field,provider_field]].drop_duplicates()
     
     item2provider = {x: y for x, y in zip(iid_pro, provider_list)}
+    item2pro = list(item2provider.items())[:10]
+    print("item2provider: ", item2pro)
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
+    print("matrix A:", A[:10])
     iid2pid = []
     for i in range(item_num):
         iid2pid.append(item2provider[i])
