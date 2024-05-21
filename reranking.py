@@ -67,6 +67,8 @@ def CPU_layer(ordered_tilde_dual, rho, lambd):
     prob.solve()
     return answer.value
 
+
+
 def compute_next_dual(eta, rho, dual, gradient, lambd):
     tilde_dual = dual - eta*gradient/rho/rho
     order = np.argsort(tilde_dual*rho)
@@ -77,20 +79,18 @@ def compute_next_dual(eta, rho, dual, gradient, lambd):
 def P_MMF_CPU(lambd,args):
     T = args.Time
 
-    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
-    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
-    datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
+    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
+    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     data = pd.DataFrame(data)
-    data[2] += 1
-    uid_field, iid_field, provider_field = data.columns  
-    time_field = datas['reviews_time']
+    data[3] += 1
+    uid_field, iid_field, time_field, provider_field = data.columns     
     num_providers = len(data[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
     providerLen = np.array(data.groupby(provider_field).size().values)
     rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
-        
+    print("rho", rho)    
 
-    time_field = np.sort(time_field)
+    data.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(data)* 0.1//T)
 
     data_val = np.array(data[uid_field].values[-batch_size*T:]).astype(int)
@@ -98,15 +98,17 @@ def P_MMF_CPU(lambd,args):
 
     #normalize user-item perference score to [0,1]
     UI_matrix = sigmoid(UI_matrix)
-    tmp = datas[[iid_field,provider_field]].drop_duplicates()
+    tmp = data[[iid_field,provider_field]].drop_duplicates()
     item2provider = {x:y for x,y in zip(tmp[iid_field],tmp[provider_field])}
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
     iid2pid = []
     for i in range(item_num):
-        iid2pid.append(item2provider[i])
-        A[i,item2provider[i]] = 1
+        if item2provider[i] < num_providers:
+          iid2pid.append(item2provider[i])
+          A[i, item2provider[i]] = 1
+        
     W_batch = []
     RRQ_batch, MMF_batch = [], []
 
@@ -134,7 +136,7 @@ def P_MMF_CPU(lambd,args):
         for t in range(T):
             alpha = args.alpha
             x_title = batch_UI[t,:] - np.matmul(A,mu_t)
-            mask = np.matmul(A,(B_t>0).astype(np.float))
+            mask = np.matmul(A,(B_t>0).astype(float))
 
             mask = (1.0-mask) * -10000.0
             x = np.argsort(x_title+mask,axis=-1)[::-1]
@@ -147,6 +149,11 @@ def P_MMF_CPU(lambd,args):
 
             gradient = alpha * gradient + (1-alpha) * gradient_cusum
             gradient_cusum = gradient
+            print("eta", eta)
+            print("rho", rho)
+            print("mu_t", mu_t)
+            print("gradient", gradient)
+            print("lambd", lambd)
             for g in range(1):
                 mu_t = compute_next_dual(eta, rho, mu_t, gradient, lambd)
             #print(mu_t)
@@ -182,20 +189,18 @@ def P_MMF_CPU(lambd,args):
 
 def P_MMF_GPU(lambd,args):
     T = args.Time
-    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
-    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
-    datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
+    trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
+    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     data = pd.DataFrame(data)
-    data[2] += 1
-    uid_field, iid_field, provider_field = data.columns  
-    time_field = datas['reviews_time']
+    data[3] += 1
+    uid_field, iid_field, time_field, provider_field = data.columns     
     num_providers = len(data[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
     providerLen = np.array(data.groupby(provider_field).size().values)
     rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
         
 
-    time_field = np.sort(time_field)
+    data.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(data)* 0.1//T)
 
     data_val = np.array(data[uid_field].values[-batch_size*T:]).astype(int)
@@ -203,7 +208,7 @@ def P_MMF_GPU(lambd,args):
 
     #normalize user-item perference score to [0,1]
     UI_matrix = sigmoid(UI_matrix)
-    tmp = datas[[iid_field,provider_field]].drop_duplicates()
+    tmp = data[[iid_field,provider_field]].drop_duplicates()
     item2provider = {x:y for x,y in zip(tmp[iid_field],tmp[provider_field])}
 
     #A is item-provider matrix
