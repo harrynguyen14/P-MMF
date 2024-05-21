@@ -55,16 +55,33 @@ class GPU_layer(nn.Module):
 
 
 def CPU_layer(ordered_tilde_dual, rho, lambd):
-
     m = len(rho)
     answer = cp.Variable(m)
-    objective = cp.Minimize(cp.sum_squares(cp.multiply(rho,answer) - cp.multiply(rho, ordered_tilde_dual)))
-    #objective = cp.Minimize(cp.sum(cp.multiply(rho,answer) - cp.multiply(rho, ordered_tilde_dual)))
+    
+    
+    objective = cp.Minimize(cp.sum_squares(cp.multiply(rho, answer) - cp.multiply(rho, ordered_tilde_dual)))
+    
+    
     constraints = []
-    for i in range(1, m+1):
-        constraints += [cp.sum(cp.multiply(rho[:i],answer[:i])) >= -lambd]
+    for i in range(1, m + 1):
+        constraints.append(cp.sum(cp.multiply(rho[:i], answer[:i])) >= -lambd)
+    
+    
+    constraints.append(answer >= -1)  # Lower bound constraint
+    constraints.append(answer <= 1)   # Upper bound constraint
+    
     prob = cp.Problem(objective, constraints)
     prob.solve()
+    
+    # Debugging information
+    # print("Problem status:", prob.status)
+    # if prob.status not in ["optimal", "optimal_inaccurate"]:
+    #     print("Problem not solved to optimality. Status:", prob.status)
+    #     return None
+    
+    # print("Optimal value of the objective function:", prob.value)
+    # print("Optimal solution:", answer.value)
+    
     return answer.value
 
 
@@ -73,6 +90,9 @@ def compute_next_dual(eta, rho, dual, gradient, lambd):
     tilde_dual = dual - eta*gradient/rho/rho
     order = np.argsort(tilde_dual*rho)
     ordered_tilde_dual = tilde_dual[order]
+    # print("tilde_dual:", tilde_dual)
+    # print("order:", order)
+    # print("ordered_tilde_dual:", ordered_tilde_dual)
     ordered_next_dual = CPU_layer(ordered_tilde_dual, rho[order], lambd)
     return ordered_next_dual[order.argsort()]
 
@@ -82,13 +102,22 @@ def P_MMF_CPU(lambd,args):
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
     data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     data = pd.DataFrame(data)
-    data[3] += 1
+    # data[3] += 1
     uid_field, iid_field, time_field, provider_field = data.columns     
+    n_provider = 1
+    provider_map = {-1: 0}
+    key = tuple(data[3])
+    for interaction in data:
+        if key not in provider_map:
+            provider_map[key] = n_provider
+            n_provider += 1
+
     num_providers = len(data[provider_field].unique())
+
     user_num, item_num = np.shape(trained_preference_scores)
     providerLen = np.array(data.groupby(provider_field).size().values)
     rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
-    print("rho", rho)    
+    #print("rho", rho)    
 
     data.sort_values(by=[time_field], ascending=True,inplace=True)
     batch_size = int(len(data)* 0.1//T)
@@ -149,11 +178,11 @@ def P_MMF_CPU(lambd,args):
 
             gradient = alpha * gradient + (1-alpha) * gradient_cusum
             gradient_cusum = gradient
-            print("eta", eta)
-            print("rho", rho)
-            print("mu_t", mu_t)
-            print("gradient", gradient)
-            print("lambd", lambd)
+            # print("eta", eta)
+            # print("rho", rho)
+            # print("mu_t", mu_t)
+            # print("gradient", gradient)
+            # print("lambd", lambd)
             for g in range(1):
                 mu_t = compute_next_dual(eta, rho, mu_t, gradient, lambd)
             #print(mu_t)
@@ -162,10 +191,13 @@ def P_MMF_CPU(lambd,args):
         ndcg = 0
 
         base_model_provider_exposure = np.zeros(num_providers)
+        #print("base_model_provider_exposure", base_model_provider_exposure)
         result = 0
         for t in range(T):
             dcg = 0
             x_recommended = result_x[t]
+            print("x_recommend", x_recommended)
+            print("iid2pid", iid2pid)
             #x_recommended = np.random.choice(list(range(0,item_num)),size=K,replace=False,p=x_value[t,:]/K)
             for k in range(K):
                 base_model_provider_exposure[iid2pid[x_recommended[k]]] += 1
