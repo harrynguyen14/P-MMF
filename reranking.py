@@ -78,49 +78,31 @@ def P_MMF_CPU(lambd,args):
     T = args.Time
 
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
+    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
-    ip_data = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/item_providers.npy", allow_pickle=True) 
-    datas = datas.item()
-    ip_df = pd.DataFrame(ip_data, columns=['Item ID', 'Providers'])
-    uid_field = datas['user_list']
-    iid_field = datas['item_list']
-    iid_pro, provider_item = ip_df['Item ID'], ip_df['Providers']
+    data = pd.DataFrame(data)
+    data[2] += 1
+    uid_field, iid_field, provider_field = data.columns  
     time_field = datas['reviews_time']
-    provider_field = datas['providers']
-
-    num_providers = len(provider_field)
+    num_providers = len(data[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
-    provider_count = Counter(provider_field)
-    providerLen = np.array(list(provider_count.values()))
+    providerLen = np.array(data.groupby(provider_field).size().values)
     rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
-    
+        
 
     time_field = np.sort(time_field)
-    batch_size = int(len(datas)* 0.1//T)
+    batch_size = int(len(data)* 0.1//T)
 
-    data_val = np.array(uid_field[-batch_size*T:]).astype(int)
-    valid_indices = data_val < trained_preference_scores.shape[0]
-    filtered_data_val = data_val[valid_indices]
-    #print("data_val filtered shape: ", filtered_data_val)
-    UI_matrix = trained_preference_scores[filtered_data_val]
+    data_val = np.array(data[uid_field].values[-batch_size*T:]).astype(int)
+    UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
     UI_matrix = sigmoid(UI_matrix)
-
-    provider_list = provider_item.tolist()
-
-    combined_data = list(zip(iid_pro, provider_list))
-    print("combined data", combined_data)
-    tmp = list(set(combined_data[:10]))
-    #tmp = datas[[iid_field,provider_field]].drop_duplicates()
-    
-    item2provider = {x: y for x, y in zip(iid_pro, provider_list)}
-    item2pro = list(item2provider.items())[:10]
-    print("item2provider: ", item2pro)
+    tmp = datas[[iid_field,provider_field]].drop_duplicates()
+    item2provider = {x:y for x,y in zip(tmp[iid_field],tmp[provider_field])}
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
-    print("matrix A:", A[:10])
     iid2pid = []
     for i in range(item_num):
         iid2pid.append(item2provider[i])
@@ -201,49 +183,31 @@ def P_MMF_CPU(lambd,args):
 def P_MMF_GPU(lambd,args):
     T = args.Time
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
+    data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     datas = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/metadata.npy", allow_pickle=True)
-    ip_data = np.load("/content/drive/MyDrive/Cap/Dataset/Office_Products/item_providers.npy", allow_pickle=True) 
-    datas = datas.item()
-    ip_df = pd.DataFrame(ip_data, columns=['Item ID', 'Providers'])
-    uid_field = datas['user_list']
-    iid_field = datas['item_list']
-    iid_pro, provider_item = ip_df['Item ID'], ip_df['Providers']
+    data = pd.DataFrame(data)
+    data[2] += 1
+    uid_field, iid_field, provider_field = data.columns  
     time_field = datas['reviews_time']
-    provider_field = datas['providers']
-
-    num_providers = len(provider_field)
+    num_providers = len(data[provider_field].unique())
     user_num, item_num = np.shape(trained_preference_scores)
-    provider_count = Counter(provider_field)
-    providerLen = np.array(list(provider_count.values()))
+    providerLen = np.array(data.groupby(provider_field).size().values)
     rho = (1+1/num_providers)*providerLen/np.sum(providerLen)
-    
+        
 
     time_field = np.sort(time_field)
-    batch_size = int(len(datas)* 0.1//T)
+    batch_size = int(len(data)* 0.1//T)
 
-    data_val = np.array(uid_field[-batch_size*T:]).astype(int)
-    valid_indices = data_val < trained_preference_scores.shape[0]
-    filtered_data_val = data_val[valid_indices]
-    #print("data_val filtered shape: ", filtered_data_val)
-    UI_matrix = trained_preference_scores[filtered_data_val]
+    data_val = np.array(data[uid_field].values[-batch_size*T:]).astype(int)
+    UI_matrix = trained_preference_scores[data_val]
 
     #normalize user-item perference score to [0,1]
     UI_matrix = sigmoid(UI_matrix)
-
-    provider_list = provider_item.tolist()
-
-    combined_data = list(zip(iid_pro, provider_list))
-    print("combined data", combined_data)
-    tmp = list(set(combined_data[:10]))
-    #tmp = datas[[iid_field,provider_field]].drop_duplicates()
-    
-    item2provider = {x: y for x, y in zip(iid_pro, provider_list)}
-    item2pro = list(item2provider.items())[:10]
-    print("item2provider: ", item2pro)
+    tmp = datas[[iid_field,provider_field]].drop_duplicates()
+    item2provider = {x:y for x,y in zip(tmp[iid_field],tmp[provider_field])}
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
-    print("matrix A:", A[:10])
     iid2pid = []
     for i in range(item_num):
         iid2pid.append(item2provider[i])
