@@ -102,7 +102,7 @@ def P_MMF_CPU(lambd,args):
     trained_preference_scores = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/result/CCFCRec/best_model_ratings.npy", allow_pickle=True)
     data = np.load("/content/drive/MyDrive/Capstone/Dataset/Office_Products_Filtered_5/test_cold_interactions_provider_formatted.npy", allow_pickle=True)   
     data = pd.DataFrame(data)
-    # data[3] += 1
+    data[3] += 1
     uid_field, iid_field, time_field, provider_field = data.columns     
     n_provider = 1
     provider_map = {-1: 0}
@@ -132,12 +132,18 @@ def P_MMF_CPU(lambd,args):
 
     #A is item-provider matrix
     A = np.zeros((item_num,num_providers))
+    for i in range(len(item2provider)):
+      if item2provider[i] >= num_providers:
+          item2provider[i] = num_providers - 1
+            
     iid2pid = []
     for i in range(item_num):
-        if item2provider[i] < num_providers:
-          iid2pid.append(item2provider[i])
-          A[i, item2provider[i]] = 1
-        
+      # if item2provider[i] < num_providers:
+        iid2pid.append(item2provider[i])
+        A[i, item2provider[i]] = 1 
+ 
+    print("iid2pid", iid2pid)
+    #print("len iid2pid", len(iid2pid))    
     W_batch = []
     RRQ_batch, MMF_batch = [], []
 
@@ -178,14 +184,10 @@ def P_MMF_CPU(lambd,args):
 
             gradient = alpha * gradient + (1-alpha) * gradient_cusum
             gradient_cusum = gradient
-            # print("eta", eta)
-            # print("rho", rho)
-            # print("mu_t", mu_t)
-            # print("gradient", gradient)
-            # print("lambd", lambd)
+  
             for g in range(1):
                 mu_t = compute_next_dual(eta, rho, mu_t, gradient, lambd)
-            #print(mu_t)
+          
             #exit(0)
             sum_dual += mu_t
         ndcg = 0
@@ -196,8 +198,8 @@ def P_MMF_CPU(lambd,args):
         for t in range(T):
             dcg = 0
             x_recommended = result_x[t]
-            print("x_recommend", x_recommended)
-            print("iid2pid", iid2pid)
+            # print("x_recommend", x_recommended)
+            # print("iid2pid", iid2pid)
             #x_recommended = np.random.choice(list(range(0,item_num)),size=K,replace=False,p=x_value[t,:]/K)
             for k in range(K):
                 base_model_provider_exposure[iid2pid[x_recommended[k]]] += 1
